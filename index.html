@@ -13,9 +13,12 @@
             padding: 0;
         }
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             padding: 0 15px;
+        }
+        td:first-child {
+            font-weight: bold;
         }
         .navbar {
             display: flex;
@@ -26,14 +29,14 @@
             margin-bottom: 20px;
         }
         .logo img {
-            height: 50px; /* Adjusted for your logo's aspect ratio */
+            height: 50px;
             width: auto;
         }
         .nav-links a {
             text-decoration: none;
             color: #333;
-            margin-left: 20px;
             font-size: 0.95em;
+            font-weight: bold;
         }
         .nav-links a:hover {
             color: #0366d6;
@@ -52,29 +55,54 @@
         table {
             border-collapse: collapse;
             font-size: 0.9em;
-            min-width: 600px;
+            min-width: 800px;
             max-width: 100%;
         }
         th, td {
-            padding: 8px;
+            padding: 10px;
             text-align: left;
             border-bottom: 1px solid #eee;
         }
         th {
-            font-weight: 600;
+            font-weight: bold; /* Changed from 600 to bold */
             color: #555;
+            background-color: #f8f8f8;
         }
         .download-btn {
             display: inline-block;
-            padding: 4px 8px;
+            padding: 6px 12px;
             background-color: #0366d6;
             color: white;
             text-decoration: none;
             border-radius: 3px;
-            font-size: 0.8em;
+            font-size: 0.9em;
+            transition: background-color 0.2s;
         }
         .download-btn:hover {
             background-color: #0056b3;
+        }
+        .releases {
+            position: relative;
+        }
+        .releases-dropdown {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 120px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+        }
+        .releases:hover .releases-dropdown {
+            display: block;
+        }
+        .releases-dropdown a {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+        .releases-dropdown a:hover {
+            background-color: #f1f1f1;
         }
     </style>
 </head>
@@ -85,43 +113,91 @@
                 <img src="cropped-biosys-logo-son-178x120-1.png" alt="Biosys logo">
             </div>
             <div class="nav-links">
-                <a href="#about">Hakkında</a>
-                <a href="#" class="download-btn">Download</a>
+                <a href="https://www.biosysmed.com/about-us/" target="_blank">About Us</a>
             </div>
         </nav>
         <h1>Bioscope Download</h1>
         <div class="table-container">
-            <table>
+            <table id="downloadTable">
                 <tr>
                     <th>OS</th>
                     <th>Version</th>
-                    <th>Date</th>
+                    <th>Release Date</th>
                     <th>Size</th>
-                    <th></th>
+                    <th>Releases</th>
+                    <th>Action</th>
                 </tr>
-                <tr>
-                    <td>Windows</td>
-                    <td>1.2.3</td>
-                    <td>2024-10-15</td>
-                    <td>45 MB</td>
-                    <td><a href="#" class="download-btn">Download</a></td>
-                </tr>
-                <tr>
-                    <td>macOS</td>
-                    <td>1.2.3</td>
-                    <td>2024-10-15</td>
-                    <td>48 MB</td>
-                    <td><a href="#" class="download-btn">Download</a></td>
-                </tr>
-                <tr>
-                    <td>Linux</td>
-                    <td>1.2.3</td>
-                    <td>2024-10-15</td>
-                    <td>42 MB</td>
-                    <td><a href="#" class="download-btn">Download</a></td>
-                </tr>
+                <!-- Table rows will be dynamically populated by JavaScript -->
             </table>
         </div>
     </div>
+
+    <script>
+        async function fetchReleaseInfo() {
+            const githubProjectName = 'mahsumozer/bioSCOPE'; // Replace with your actual GitHub project name
+            const apiUrl = `https://api.github.com/repos/${githubProjectName}/releases`;
+
+            try {
+                const response = await fetch(apiUrl);
+                const releases = await response.json();
+
+                if (releases.length === 0) {
+                    console.error('No releases found');
+                    return;
+                }
+
+                const latestRelease = releases[0];
+                const windowsAsset = latestRelease.assets.find(asset => asset.name.endsWith('-win.zip'));
+                const macAsset = latestRelease.assets.find(asset => asset.name.endsWith('-mac.zip'));
+
+                updateTableRow('Windows', windowsAsset, latestRelease);
+                updateTableRow('macOS', macAsset, latestRelease);
+                updateTableRow('Linux', null, latestRelease); // Assume Linux version is not available
+
+            } catch (error) {
+                console.error('Error fetching release info:', error);
+            }
+        }
+
+        function updateTableRow(os, asset, release) {
+            const table = document.getElementById('downloadTable');
+            const row = table.insertRow(-1);
+
+            const cellOS = row.insertCell(0);
+            const cellVersion = row.insertCell(1);
+            const cellReleaseDate = row.insertCell(2);
+            const cellSize = row.insertCell(3);
+            const cellReleases = row.insertCell(4);
+            const cellAction = row.insertCell(5);
+
+            cellOS.textContent = os;
+
+            if (asset) {
+                cellVersion.textContent = release.tag_name;
+                cellReleaseDate.textContent = new Date(release.published_at).toLocaleDateString();
+                cellSize.textContent = (asset.size / (1024 * 1024)).toFixed(2) + ' MB';
+                
+                cellReleases.innerHTML = `
+                    <div class="releases">
+                        ${release.tag_name} ▼
+                        <div class="releases-dropdown">
+                            <a href="#">${release.tag_name}</a>
+                        </div>
+                    </div>
+                `;
+
+                cellAction.innerHTML = `<a href="${asset.browser_download_url}" class="download-btn">Download</a>`;
+            } else {
+                cellVersion.textContent = '---';
+                cellReleaseDate.textContent = '---';
+                cellSize.textContent = '---';
+                cellReleases.textContent = 'Coming soon';
+                cellAction.innerHTML = '<span class="download-btn" style="opacity: 0.5; cursor: not-allowed;">Coming soon</span>';
+            }
+        }
+
+        // Call the function to fetch and update release info when the page loads
+        fetchReleaseInfo();
+    </script>
 </body>
 </html>
